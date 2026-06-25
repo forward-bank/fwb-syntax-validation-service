@@ -102,9 +102,9 @@ public class SyntaxValidationRequestListener implements MessageListener {
             System.out.println("  Request Payload : " + requestBody);
 
             Map<String, Object> requestMap = OBJECT_MAPPER.readValue(requestBody, Map.class);
-            String paymentXmlPath          = (String) requestMap.get("paymentXmlPath");
+            String paymentFilePath          = (String) requestMap.get("paymentFilePath");
 
-            SyntaxValidationResponse response = validator.validate(paymentXmlPath);
+            SyntaxValidationResponse response = validator.validate(paymentFilePath);
             System.out.println("  Validation Result : " + response);
 
             System.out.println("  → Attempting sendResponse...");
