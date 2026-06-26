@@ -3,7 +3,7 @@ package com.forward.model;
 public class SyntaxValidationResponse {
 
     private final String status;    // "VALID" | "INVALID"
-    private final String errorCode; // null when VALID, e.g. "SYNTAX_ERROR_001" when INVALID
+    private final String errorCode; // null when VALID, e.g. "SVE_001" when INVALID
 
     private SyntaxValidationResponse(String status, String errorCode) {
         this.status    = status;

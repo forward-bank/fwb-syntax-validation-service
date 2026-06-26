@@ -4,14 +4,14 @@ import com.forward.model.SyntaxValidationResponse;
 
 public class SyntaxValidator {
 
-    public SyntaxValidationResponse validate(String paymentXmlPath) {
-        System.out.println("  Validating : " + paymentXmlPath);
+    public SyntaxValidationResponse validate(String paymentFilePath) {
+        System.out.println("  Validating : " + paymentFilePath);
 
-        if (paymentXmlPath == null || paymentXmlPath.isBlank()) {
+        if (paymentFilePath == null || paymentFilePath.isBlank()) {
             return SyntaxValidationResponse.invalid("SVE_001"); // missing path
         }
 
-        if (!paymentXmlPath.endsWith(".xml")) {
+        if (!paymentFilePath.endsWith(".xml")) {
             return SyntaxValidationResponse.invalid("SVE_002"); // not an XML file
         }
 
