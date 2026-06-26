@@ -54,11 +54,18 @@
             <artifactId>jackson-core</artifactId>
             <version>2.15.4</version>
         </dependency>
-
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>2.15.4</version>
         </dependency>
+
+        <!-- AWS SDK v2 S3 — used for both real AWS and LocalStack -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.25.60</version>
+        </dependency>
+
     </dependencies>
 </project>

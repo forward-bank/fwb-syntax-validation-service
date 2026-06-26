@@ -892,6 +892,12 @@ The CustomerDirectDebitInitiation message must not be used by the creditor agent
                     <xs:documentation source="Definition" xml:lang="EN">Set of characteristics that apply to the credit side of the payment transactions included in the direct debit transaction initiation.</xs:documentation>
                 </xs:annotation>
             </xs:element>
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="SplmtryData" type="SupplementaryData1">
+                <xs:annotation>
+                    <xs:documentation source="Name" xml:lang="EN">SupplementaryData</xs:documentation>
+                    <xs:documentation source="Definition" xml:lang="EN">Additional information that cannot be captured in the structured elements and/or any other specific block.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="DateAndPlaceOfBirth1">
@@ -2792,6 +2798,12 @@ Decimal fractions of seconds may be included. In this case, the involved parties
                     <xs:documentation source="Definition" xml:lang="EN">Name by which a party is known and which is usually used to identify that party.</xs:documentation>
                 </xs:annotation>
             </xs:element>
+            <xs:element maxOccurs="1" minOccurs="0" name="Id" type="Party38Choice__1">
+                <xs:annotation>
+                    <xs:documentation source="Name" xml:lang="EN">Identification</xs:documentation>
+                    <xs:documentation source="Definition" xml:lang="EN">Unique and unambiguous identification of a party.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="PartyIdentification135__5">
@@ -4418,4 +4430,33 @@ Usage: Purpose is used by the end-customers, that is initiating party, (ultimate
         </xs:annotation>
         <xs:restriction base="xs:boolean"/>
     </xs:simpleType>
+    <xs:complexType name="SupplementaryData1">
+        <xs:annotation>
+            <xs:documentation source="Name" xml:lang="EN">SupplementaryData1</xs:documentation>
+            <xs:documentation source="Definition" xml:lang="EN">Additional information that cannot be captured in the structured elements and/or any other specific block.</xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:element maxOccurs="1" minOccurs="0" name="PlcAndNm" type="Max140Text">
+                <xs:annotation>
+                    <xs:documentation source="Name" xml:lang="EN">PlaceAndName</xs:documentation>
+                    <xs:documentation source="Definition" xml:lang="EN">Unambiguous reference to the location where the supplementary data must be inserted in the message instance.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+            <xs:element name="Envlp" type="SupplementaryDataEnvelope1">
+                <xs:annotation>
+                    <xs:documentation source="Name" xml:lang="EN">Envelope</xs:documentation>
+                    <xs:documentation source="Definition" xml:lang="EN">Technical element wrapping the supplementary data.</xs:documentation>
+                </xs:annotation>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="SupplementaryDataEnvelope1">
+        <xs:annotation>
+            <xs:documentation source="Name" xml:lang="EN">SupplementaryDataEnvelope1</xs:documentation>
+            <xs:documentation source="Definition" xml:lang="EN">Technical component that contains the validated supplementary data information. This technical envelope allows to segregate the supplementary data information from any other information.</xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:any maxOccurs="unbounded" minOccurs="0" namespace="##any" processContents="lax"/>
+        </xs:sequence>
+    </xs:complexType>
 </xs:schema>
