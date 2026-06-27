@@ -18,6 +18,7 @@ A Spring Boot microservice that validates SEPA Direct Debit **pain.008.001.08** 
 10. [application.properties Reference](#applicationproperties-reference)
 11. [Running Locally](#running-locally)
 12. [LocalStack Setup](#localstack-setup)
+13. [Performance Benchmarks](#performance-benchmarks)
 
 ---
 
@@ -503,5 +504,175 @@ SyntaxValidationRequestListener: message received
   ✓ Response sent to SYNTAX.VALIDATION.RESPONSE.QUEUE
     Payload        : {"status":"VALID","errorCode":"","errorMessage":""}
     Correlation ID : test-correlation-001
+================================================================================
+```
+
+---
+
+## Performance Benchmarks
+
+Measured on a local development machine against **LocalStack** (S3) and **IBM MQ** running in Docker.
+Environment: Java 21, Spring Boot 3.3.4, JAXP XSD validation, `aws.localstack.enabled=true`.
+
+The trigger message sent to `FIRST.TEST.QUEUE` in `fwb-direct-debit-workflow-service` for all runs:
+
+```json
+{
+  "fileDataSeq": 314900,
+  "channelRef": "I1234567890123",
+  "outputChannelCode": "ABB",
+  "fileS3Path": "FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/<file>"
+}
+```
+
+---
+
+### Summary
+
+| Transactions | File size | S3 download | XSD validation | Total |
+|:---:|---:|---:|---:|---:|
+| 2 | 5,561 bytes (~5 KB) | 1,716 ms | 79 ms | ~1,795 ms |
+| 10,000 | 13,644,707 bytes (~13 MB) | 1,022 ms | 1,713 ms | ~2,735 ms |
+| 25,000 | 34,125,707 bytes (~33 MB) | 1,551 ms | 1,364 ms | ~2,915 ms |
+| 50,000 | 68,260,707 bytes (~67 MB) | 3,466 ms | 2,633 ms | ~6,099 ms |
+
+**Key observations:**
+- XSD validation scales roughly linearly with file size (~79 ms at 5 KB → ~2,633 ms at 67 MB).
+- S3 download time at small file sizes (2 txn) is disproportionately high (1,716 ms) due to LocalStack connection setup overhead on the first request — subsequent downloads (10k, 25k) are faster despite being much larger.
+- The 50k file download time (3,466 ms for 67 MB) represents ~19 MB/s throughput to LocalStack, which is expected for local Docker networking.
+
+---
+
+### 2 Transactions — 5,561 bytes
+
+**Input message trigger:**
+```json
+{
+  "fileDataSeq": 314900,
+  "channelRef": "I1234567890123",
+  "outputChannelCode": "ABB",
+  "fileS3Path": "FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.PM.xml_452387"
+}
+```
+
+**Service log:**
+```
+================================================================================
+SyntaxValidationRequestListener: message received
+  JMSMessageID    : ID:414d51204d592e544553542e514d4e473e043d6a01570140
+  Correlation ID  : ID:414d51204d592e544553542e514d4e473e043d6a02550140
+  Request Payload : {"paymentFilePath":"FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.PM.xml_452387"}
+  S3 URI          : FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.PM.xml_452387
+  [S3FileDownloader] downloading s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.PM.xml_452387
+  [S3FileDownloader] ✓ downloaded 5561 bytes from s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.PM.xml_452387
+  S3 download time: 1716 ms
+  [SyntaxValidator] ✓ VALID
+  XSD validation time: 79 ms
+  Validation result: SyntaxValidationResponse{status='VALID', errorCode='null', errorMessage='null'}
+  ✓ Response sent to SYNTAX.VALIDATION.RESPONSE.QUEUE
+    Payload        : {"status":"VALID","errorCode":"","errorMessage":""}
+    Correlation ID : ID:414d51204d592e544553542e514d4e473e043d6a02550140
+================================================================================
+```
+
+---
+
+### 10,000 Transactions — 13,644,707 bytes (~13 MB)
+
+**Input message trigger:**
+```json
+{
+  "fileDataSeq": 314900,
+  "channelRef": "I1234567890123",
+  "outputChannelCode": "ABB",
+  "fileS3Path": "FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.10000txn.xml.PM_10000"
+}
+```
+
+**Service log:**
+```
+================================================================================
+SyntaxValidationRequestListener: message received
+  JMSMessageID    : ID:414d51204d592e544553542e514d4e473e043d6a01830140
+  Correlation ID  : ID:414d51204d592e544553542e514d4e473e043d6a02810140
+  Request Payload : {"paymentFilePath":"FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.10000txn.xml.PM_10000"}
+  S3 URI          : FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.10000txn.xml.PM_10000
+  [S3FileDownloader] downloading s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.10000txn.xml.PM_10000
+  [S3FileDownloader] ✓ downloaded 13644707 bytes from s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.10000txn.xml.PM_10000
+  S3 download time: 1022 ms
+  [SyntaxValidator] ✓ VALID
+  XSD validation time: 1713 ms
+  Validation result: SyntaxValidationResponse{status='VALID', errorCode='null', errorMessage='null'}
+  ✓ Response sent to SYNTAX.VALIDATION.RESPONSE.QUEUE
+    Payload        : {"status":"VALID","errorCode":"","errorMessage":""}
+    Correlation ID : ID:414d51204d592e544553542e514d4e473e043d6a02810140
+================================================================================
+```
+
+---
+
+### 25,000 Transactions — 34,125,707 bytes (~33 MB)
+
+**Input message trigger:**
+```json
+{
+  "fileDataSeq": 314900,
+  "channelRef": "I1234567890123",
+  "outputChannelCode": "ABB",
+  "fileS3Path": "FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.25000txn.xml.PM_25000"
+}
+```
+
+**Service log:**
+```
+================================================================================
+SyntaxValidationRequestListener: message received
+  JMSMessageID    : ID:414d51204d592e544553542e514d4e473e043d6a018b0140
+  Correlation ID  : ID:414d51204d592e544553542e514d4e473e043d6a02890140
+  Request Payload : {"paymentFilePath":"FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.25000txn.xml.PM_25000"}
+  S3 URI          : FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.25000txn.xml.PM_25000
+  [S3FileDownloader] downloading s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.25000txn.xml.PM_25000
+  [S3FileDownloader] ✓ downloaded 34125707 bytes from s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.25000txn.xml.PM_25000
+  S3 download time: 1551 ms
+  [SyntaxValidator] ✓ VALID
+  XSD validation time: 1364 ms
+  Validation result: SyntaxValidationResponse{status='VALID', errorCode='null', errorMessage='null'}
+  ✓ Response sent to SYNTAX.VALIDATION.RESPONSE.QUEUE
+    Payload        : {"status":"VALID","errorCode":"","errorMessage":""}
+    Correlation ID : ID:414d51204d592e544553542e514d4e473e043d6a02890140
+================================================================================
+```
+
+---
+
+### 50,000 Transactions — 68,260,707 bytes (~67 MB)
+
+**Input message trigger:**
+```json
+{
+  "fileDataSeq": 314900,
+  "channelRef": "I1234567890123",
+  "outputChannelCode": "ABB",
+  "fileS3Path": "FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.50000txn.xml.PM_50000"
+}
+```
+
+**Service log:**
+```
+================================================================================
+SyntaxValidationRequestListener: message received
+  JMSMessageID    : ID:414d51204d592e544553542e514d4e473e043d6a01930140
+  Correlation ID  : ID:414d51204d592e544553542e514d4e473e043d6a02910140
+  Request Payload : {"paymentFilePath":"FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.50000txn.xml.PM_50000"}
+  S3 URI          : FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.50000txn.xml.PM_50000
+  [S3FileDownloader] downloading s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.50000txn.xml.PM_50000
+  [S3FileDownloader] ✓ downloaded 68260707 bytes from s3://fwb-payments-dev/FWB_DIRECT_DEBIT/PAYMENT_FILES/2026/02/04/INCOMING/I1234567890123.FWB.pain00800108.50000txn.xml.PM_50000
+  S3 download time: 3466 ms
+  [SyntaxValidator] ✓ VALID
+  XSD validation time: 2633 ms
+  Validation result: SyntaxValidationResponse{status='VALID', errorCode='null', errorMessage='null'}
+  ✓ Response sent to SYNTAX.VALIDATION.RESPONSE.QUEUE
+    Payload        : {"status":"VALID","errorCode":"","errorMessage":""}
+    Correlation ID : ID:414d51204d592e544553542e514d4e473e043d6a02910140
 ================================================================================
 ```

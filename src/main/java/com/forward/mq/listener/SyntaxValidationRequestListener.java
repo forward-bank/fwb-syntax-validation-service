@@ -152,7 +152,10 @@ public class SyntaxValidationRequestListener implements MessageListener {
             // ── Step 2: download XML from S3 / LocalStack ─────────────────────
             byte[] xmlBytes;
             try {
+                long s3Start = System.nanoTime();
                 xmlBytes = s3FileDownloader.download(s3Uri);
+                long s3ElapsedMs = (System.nanoTime() - s3Start) / 1_000_000;
+                System.out.println("  S3 download time: " + s3ElapsedMs + " ms");
             } catch (S3FileDownloader.S3DownloadException e) {
                 System.err.println("✗ S3 download failed: " + e.getMessage());
                 sendResponse(correlationId, SyntaxValidationResponse.invalid(
@@ -162,7 +165,10 @@ public class SyntaxValidationRequestListener implements MessageListener {
             }
 
             // ── Step 3: validate XML against pain.008.001.08 XSD ─────────────
+            long xsdStart = System.nanoTime();
             SyntaxValidationResponse validationResult = syntaxValidator.validate(xmlBytes);
+            long xsdElapsedMs = (System.nanoTime() - xsdStart) / 1_000_000;
+            System.out.println("  XSD validation time: " + xsdElapsedMs + " ms");
             System.out.println("  Validation result: " + validationResult);
 
             // ── Step 4: send response to response queue ────────────────────────
